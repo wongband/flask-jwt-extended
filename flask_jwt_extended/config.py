@@ -83,6 +83,10 @@ class _Config(object):
         return current_app.config["JWT_QUERY_STRING_NAME"]
 
     @property
+    def query_string_value_prefix(self):
+        return current_app.config["JWT_QUERY_STRING_VALUE_PREFIX"]
+
+    @property
     def access_cookie_name(self):
         return current_app.config["JWT_ACCESS_COOKIE_NAME"]
 
@@ -290,6 +294,10 @@ class _Config(object):
     @property
     def leeway(self):
         return current_app.config["JWT_DECODE_LEEWAY"]
+
+    @property
+    def encode_nbf(self):
+        return current_app.config["JWT_ENCODE_NBF"]
 
 
 config = _Config()

@@ -31,9 +31,12 @@ def test_default_headers(app):
     # Ensure other authorization types don't work
     access_headers = {"Authorization": "Basic basiccreds"}
     response = test_client.get("/protected", headers=access_headers)
-    expected_json = {"msg": "Bad Authorization header. Expected value 'Bearer <JWT>'"}
-    assert response.status_code == 422
-    assert response.get_json() == expected_json
+    error_msg = (
+        "Missing 'Bearer' type in 'Authorization' header. "
+        "Expected 'Authorization: Bearer <JWT>'"
+    )
+    assert response.status_code == 401
+    assert response.get_json() == {"msg": error_msg}
 
     # Ensure default headers work
     access_headers = {"Authorization": "Bearer {}".format(access_token)}
@@ -49,6 +52,18 @@ def test_default_headers(app):
 
     # Ensure default headers work with multiple field values in any position
     access_headers = {"Authorization": "Basic creds, Bearer {}".format(access_token)}
+    response = test_client.get("/protected", headers=access_headers)
+    assert response.status_code == 200
+    assert response.get_json() == {"foo": "bar"}
+
+
+def test_header_with_trailing_spaces_and_commas(app):
+    test_client = app.test_client()
+
+    with app.test_request_context():
+        access_token = create_access_token("username")
+
+    access_headers = {"Authorization": "Bearer {},   ".format(access_token)}
     response = test_client.get("/protected", headers=access_headers)
     assert response.status_code == 200
     assert response.get_json() == {"foo": "bar"}
@@ -96,9 +111,12 @@ def test_custom_header_type(app):
     # Insure 'default' headers no longer work
     access_headers = {"Authorization": "Bearer {}".format(access_token)}
     response = test_client.get("/protected", headers=access_headers)
-    expected_json = {"msg": "Bad Authorization header. Expected value 'JWT <JWT>'"}
-    assert response.status_code == 422
-    assert response.get_json() == expected_json
+    error_msg = (
+        "Missing 'JWT' type in 'Authorization' header. "
+        "Expected 'Authorization: JWT <JWT>'"
+    )
+    assert response.status_code == 401
+    assert response.get_json() == {"msg": error_msg}
 
     # Insure new headers do work
     access_headers = {"Authorization": "JWT {}".format(access_token)}
@@ -129,7 +147,7 @@ def test_custom_header_type(app):
     app.config["JWT_HEADER_TYPE"] = ""
     access_headers = {"Authorization": "Bearer {}".format(access_token)}
     response = test_client.get("/protected", headers=access_headers)
-    expected_json = {"msg": "Bad Authorization header. Expected value '<JWT>'"}
+    expected_json = {"msg": "Bad Authorization header. Expected 'Authorization: <JWT>'"}
     assert response.get_json() == expected_json
     assert response.status_code == 422
 
@@ -160,7 +178,7 @@ def test_header_without_jwt(app):
     response = test_client.get("/protected", headers=access_headers)
     assert response.status_code == 422
     assert response.get_json() == {
-        "msg": "Bad Authorization header. Expected value 'Bearer <JWT>'"
+        "msg": "Bad Authorization header. Expected 'Authorization: Bearer <JWT>'"
     }
 
 

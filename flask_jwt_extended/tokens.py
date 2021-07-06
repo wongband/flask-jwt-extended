@@ -2,9 +2,9 @@ import uuid
 from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
+from hmac import compare_digest
 
 import jwt
-from werkzeug.security import safe_str_cmp
 
 from flask_jwt_extended.exceptions import CSRFError
 from flask_jwt_extended.exceptions import JWTDecodeError
@@ -24,6 +24,7 @@ def _encode_jwt(
     json_encoder,
     secret,
     token_type,
+    nbf,
 ):
     now = datetime.now(timezone.utc)
 
@@ -34,10 +35,12 @@ def _encode_jwt(
         "fresh": fresh,
         "iat": now,
         "jti": str(uuid.uuid4()),
-        "nbf": now,
         "type": token_type,
         identity_claim_key: identity,
     }
+
+    if nbf:
+        token_data["nbf"] = now
 
     if csrf:
         token_data["csrf"] = str(uuid.uuid4())
@@ -107,7 +110,7 @@ def _decode_jwt(
     if csrf_value:
         if "csrf" not in decoded_token:
             raise JWTDecodeError("Missing claim: csrf")
-        if not safe_str_cmp(decoded_token["csrf"], csrf_value):
+        if not compare_digest(decoded_token["csrf"], csrf_value):
             raise CSRFError("CSRF double submit tokens do not match")
 
     return decoded_token
